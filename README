@@ -1,0 +1,11 @@
+PCB-PROBE
+Original Perl version 2011 Lee Essen
+Ported to C++ by Ivan Deras on 2013 (ideras@gmail.com)
+
+This program will read in a pcb-gcode (Eagle) or pcb2gcode etch file and 
+add gcode to probe the board beforehand, then adjust milling depth to compensate
+for board/table height variations.
+
+USE AT YOUR OWN RISK
+IF YOUR PROBE FAILS YOU WILL BREAK BITS
+PLEASE ONLY USE ON ETCH FILES (not drill or mill)
