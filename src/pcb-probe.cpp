@@ -212,8 +212,8 @@ string interpolate(Real x, Real y)
     int cellx, celly;
     grid_ref(x, y, cellx, celly);
 
-    Real os_x = ((x - info.MillMinX) - ((Real)cellx * info.GridSize)) / info.GridSize;
-    Real os_y = ((y - info.MillMinY) - ((Real)celly * info.GridSize)) / info.GridSize;
+    Real os_x = ((x - info.MillMinX) - ((Real) cellx * info.GridSize)) / info.GridSize;
+    Real os_y = ((y - info.MillMinY) - ((Real) celly * info.GridSize)) / info.GridSize;
 
     int px_cell = cellx + (os_x > 0.5 ? 1 : -1);
     int py_cell = celly + (os_y > 0.5 ? 1 : -1);
@@ -353,49 +353,49 @@ void GenerateGCodeWithProbing(const char *outfile_path)
                     "G00 Z[#3]\n"
                     "O100 endsub\n"
                     "\n";
-            
-                /*
-		 * Now we can create the code for the depth sensing bit... but
-		 * we should do it in a fairly optimal way
-		 */
 
-                int gx, gy, rgx;
-                
-                for (gy = 0; gy <= info.GridMaxY; gy++) {
-                    for (rgx = 0; rgx <= info.GridMaxX; rgx++) {
-                        	if(gy & 1) {
-					gx = info.GridMaxX - rgx;
-				} else {
-					gx = rgx;
-				}
+            /*
+             * Now we can create the code for the depth sensing bit... but
+             * we should do it in a fairly optimal way
+             */
 
-				// Find the point in the centre of the grid square...
-				Real px = info.MillMinX + ((Real)gx * info.GridSize) + (info.GridSize/2);
-				Real py = info.MillMinY + ((Real)gy * info.GridSize) + (info.GridSize/2);
-                                
-                                if (!cellHasVariable(gx, gy))
-                                    continue;
-                                
-				int var = cell_variable(gx, gy);
-	
-                                out << "(PROBE[" << gx << "," << gy << "] " << px << " " << py << " -> " << var << ")" << endl;
-                                out << "O100 call [" << px << "] [" << py << "] [#2] [#4] [#5] [#6]" << endl;
-                                out << "#" << var << " = #5063" << endl;
-			}
-		}
-		
-		/*
-		 * Now before we go into the main mill bit we need to give you a chance
-		 * to undo the probe connections
-		 */
-		out <<  "\n"
-			"\n"
-			"G00 Z[#1]		(safe height)\n"
-			"(MSG,PROBE: Probe complete, remove connections & resume)\n"
-			"M60			(pause, wait for resume)\n"
-			"(MSG,PROBE: Beginning etch)\n"
-			"\n"
-			"\n";
+            int gx, gy, rgx;
+
+            for (gy = 0; gy <= info.GridMaxY; gy++) {
+                for (rgx = 0; rgx <= info.GridMaxX; rgx++) {
+                    if (gy & 1) {
+                        gx = info.GridMaxX - rgx;
+                    } else {
+                        gx = rgx;
+                    }
+
+                    // Find the point in the centre of the grid square...
+                    Real px = info.MillMinX + ((Real) gx * info.GridSize) + (info.GridSize / 2);
+                    Real py = info.MillMinY + ((Real) gy * info.GridSize) + (info.GridSize / 2);
+
+                    if (!cellHasVariable(gx, gy))
+                        continue;
+
+                    int var = cell_variable(gx, gy);
+
+                    out << "(PROBE[" << gx << "," << gy << "] " << px << " " << py << " -> " << var << ")" << endl;
+                    out << "O100 call [" << px << "] [" << py << "] [#2] [#4] [#5] [#6]" << endl;
+                    out << "#" << var << " = #5063" << endl;
+                }
+            }
+
+            /*
+             * Now before we go into the main mill bit we need to give you a chance
+             * to undo the probe connections
+             */
+            out << "\n"
+                    "\n"
+                    "G00 Z[#1]		(safe height)\n"
+                    "(MSG,PROBE: Probe complete, remove connections & resume)\n"
+                    "M60			(pause, wait for resume)\n"
+                    "(MSG,PROBE: Beginning etch)\n"
+                    "\n"
+                    "\n";
         } else {
             out << cmd.ToString() << endl;
         }

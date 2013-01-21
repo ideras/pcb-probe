@@ -42,6 +42,10 @@ string NextToken(string &line, int &pos)
                 pos++;
 
                 continue;
+            case 'X': //pcb2gcode generate lines with no commands, we assume G01
+                pos = 0;
+                return "G01";
+            case 'S':
             case 'M':
             case 'G':
                 while (pos < line.length() && !isspace(line[pos]))
@@ -49,7 +53,7 @@ string NextToken(string &line, int &pos)
 
                 return result;
             default:
-                cerr << currentLine << ": Unknown symbol '" << line[pos] << endl;
+                cerr << currentLine << ": Unknown symbol '" << line[pos] << "'" << endl;
                 exit(2);
         }
     }
@@ -86,8 +90,15 @@ void ParseGCodeLine(string& line, GCodeCommand& command)
             argValue = ParseNumber(line, i);
             command.addArgument(argName, argValue);
         } else {
-            cout << currentLine << ": Unknown argument '" << line[i] << "'" << endl;
-            exit(3);
+            if (line[i] == '(') { //Is a comment
+                while (i < line.length() && line[i] != ')')
+                    i++;
+
+                i++;
+            } else {
+                cerr << currentLine << ": Unknown argument '" << line[i] << "'" << endl;
+                exit(3);
+            }
         }
 
     }
