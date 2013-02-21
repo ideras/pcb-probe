@@ -10,6 +10,9 @@
 
 #include "parser.h"
 
+#define UNIT_INCHES     0
+#define UNIT_MM         1
+
 struct Position {
     Real x;
     Real y;
@@ -18,6 +21,7 @@ struct Position {
 
 struct PCBProbeInfo
 {
+    int UnitType; //MM by default
     Position Pos;
     double GridSize;
     double SplitOver;

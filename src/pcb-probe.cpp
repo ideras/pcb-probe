@@ -101,6 +101,15 @@ void LoadAndSplitSegments(const char *infile_path, const char *outfile_path)
         currentLine++;
         getline(in, line);
         ParseGCodeLine(line, cmd);
+        
+        if (cmd.name == "G20") {
+            //Units in inches
+            info.GridSize = info.GridSize / 25.4;
+            info.SplitOver = info.SplitOver / 25.4;
+            info.UnitType = UNIT_INCHES;
+        } else if (cmd.name == "G21") {
+            info.UnitType = UNIT_MM;
+        }
 
         if (cmd.name == "G00" || cmd.name == "G01") {
             /*
@@ -319,27 +328,47 @@ void GenerateGCodeWithProbing(const char *outfile_path)
         /*
          * We'll put our stuff right after the G21
          */
-        if (cmd.name == "G21") {
+        if (cmd.name == "G21" || cmd.name == "G20") {
+            Real clear_height;
+            Real traverse_height;
+            Real route_depth;
+            Real probe_depth;
+            Real initial_probe;
+                
+            if (info.UnitType == UNIT_INCHES) {
+                clear_height = 0.47244;
+                traverse_height = 0.01969;
+                route_depth = -0.001969;
+                probe_depth = -0.03937;
+                initial_probe = -0.1969;
+            } else {
+                clear_height = 12.0;
+                traverse_height = 0.5;
+                route_depth = -0.05;
+                probe_depth = -1;
+                initial_probe = -5;
+            }
+            
             out << cmd.ToString() << endl;
             out << "\n"
-                    "(Processed with pcb-probe by Lee Essen, 2011)\n"
+                    "(Processed with pcb-probe by Lee Essen, 2011, Ivan de Jesus Deras 2013)"
                     "\n"
                     "\n"
-                    "#1=12			(clearance height)\n"
-                    "#2=0.5			(traverse height)\n"
-                    "#3=-0.05		(route depth)\n"
-                    "#4=-1			(probe depth)\n"
+                    "#1=" << clear_height << "			(clearance height)\n"
+                    "#2=" << traverse_height << "       	(traverse height)\n"
+                    "#3=" << route_depth << "   		(route depth)\n"
+                    "#4=" << probe_depth << "			(probe depth)\n"
                     "#5=400			(traverse speed)\n"
                     "#6=60			(probe speed)\n"
                     "\n"
                     "\n"
                     "M05			(stop motor)\n"
-                    "(MSG,PROBE: Position to within 5mm of surface & resume)\n"
+                    "(MSG,PROBE: Position to within 5mm (~0.2 inches) of surface & resume)\n"
                     "M60			(pause, wait for resume)\n"
                     "G49			(clear any tool offsets)\n"
                     "G92.1			(zero co-ordinate offsets)\n"
                     "G91			(use relative coordinates)\n"
-                    "G38.2 Z-5 F[#6]	(probe to find worksurface)\n"
+                    "G38.2 Z" << initial_probe << " F[#6]	(probe to find worksurface)\n"
                     "G90			(back to absolute)\n"
                     "G92 Z0			(zero Z)\n"
                     "G00 Z[#1]		(safe height)\n"

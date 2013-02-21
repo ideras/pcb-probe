@@ -27,7 +27,9 @@ int main(int argc, char** argv) {
 
     cout << "Processing input file ... " << infile_path << endl;
     LoadAndSplitSegments(infile_path, "o1");
-    cout << "Board Size (mm): " << fabs(info.MillMaxX - info.MillMinX) << "x" << fabs(info.MillMinY - info.MillMaxY) << endl << endl;
+    
+    string unit = (info.UnitType == UNIT_INCHES)? "Inches" : "mm";
+    cout << "Board Size (" << unit << "): " << fabs(info.MillMaxX - info.MillMinX) << "x" << fabs(info.MillMinY - info.MillMaxY) << endl << endl;
     
     cout << "Generating GCode output in " << outfile_path << endl;
     DoInterpolation("o2");
