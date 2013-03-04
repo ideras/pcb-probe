@@ -47,8 +47,8 @@ struct PCBProbeInfo
 
 extern PCBProbeInfo info;
 
-void LoadAndSplitSegments(const char *infile_path, const char *outfile_path);
-void DoInterpolation(const char *outfile_path);
+void LoadAndSplitSegments(const char *infile_path);
+void DoInterpolation();
 void GenerateGCodeWithProbing(const char *outfile_path);
 
 

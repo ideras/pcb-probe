@@ -70,19 +70,13 @@ void moveTo(GCodeCommand &command)
         info.Pos.z = command.getZCoord();
 }
 
-void LoadAndSplitSegments(const char *infile_path, const char *outfile_path)
+void LoadAndSplitSegments(const char *infile_path)
 {
     string line;
     ifstream in(infile_path);
-    ofstream out(outfile_path);
 
     if (!in.is_open()) {
         cerr << "Unable to open file: " << infile_path << endl;
-        return;
-    }
-
-    if (!out.is_open()) {
-        cerr << "Unable to open file: " << outfile_path << endl;
         return;
     }
 
@@ -146,16 +140,6 @@ void LoadAndSplitSegments(const char *infile_path, const char *outfile_path)
 
     info.GridMaxX = floor((info.MillMaxX - info.MillMinX) / info.GridSize);
     info.GridMaxY = floor((info.MillMaxY - info.MillMinY) / info.GridSize);
-
-    list<GCodeCommand>::iterator it = cmdList.begin();
-
-    while (it != cmdList.end()) {
-        GCodeCommand cmd = *it++;
-
-        out << cmd.ToString() << endl;
-    }
-
-    out.close();
 }
 
 //Second Pass
@@ -263,7 +247,7 @@ string interpolate(Real x, Real y)
 /*
  * Last phase ... add the depth sensing bit to the file
  */
-void DoInterpolation(const char *outfile_path)
+void DoInterpolation()
 {
     list<GCodeCommand>::iterator it = cmdList.begin();
 
@@ -292,23 +276,6 @@ void DoInterpolation(const char *outfile_path)
         it++;
     }
 
-    //Write to File for Debugging
-    ofstream out(outfile_path);
-
-    if (!out.is_open()) {
-        cerr << "Unable to open file: " << outfile_path << endl;
-        return;
-    }
-
-    it = cmdList.begin();
-
-    while (it != cmdList.end()) {
-        GCodeCommand cmd = *it++;
-
-        out << cmd.ToString() << endl;
-    }
-
-    out.close();
 }
 
 void GenerateGCodeWithProbing(const char *outfile_path)
