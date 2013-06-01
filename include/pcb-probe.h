@@ -33,8 +33,8 @@ struct PCBProbeInfo
     Real MillMaxY;
     
     //Number of cells in Grid
-    int GridMaxX;
-    int GridMaxY;
+    unsigned int GridMaxX;
+    unsigned int GridMaxY;
     
     void ResetPos()
     {

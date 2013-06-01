@@ -138,8 +138,8 @@ void LoadAndSplitSegments(const char *infile_path)
     }
     in.close();
 
-    info.GridMaxX = floor((info.MillMaxX - info.MillMinX) / info.GridSize);
-    info.GridMaxY = floor((info.MillMaxY - info.MillMinY) / info.GridSize);
+    info.GridMaxX = (unsigned int)floor((info.MillMaxX - info.MillMinX) / info.GridSize);
+    info.GridMaxY = (unsigned int)floor((info.MillMaxY - info.MillMinY) / info.GridSize);
 }
 
 //Second Pass
@@ -185,14 +185,14 @@ int cell_variable(int gx, int gy)
  * so we can lookup stuff 
  */
 
-void grid_ref(Real x, Real y, int &ref_x, int &ref_y)
+void grid_ref(Real x, Real y, unsigned int &ref_x, unsigned int &ref_y)
 {
 
     Real zero_x = x - info.MillMinX;
     Real zero_y = y - info.MillMinY;
 
-    ref_x = floor(zero_x / info.GridSize);
-    ref_y = floor(zero_y / info.GridSize);
+    ref_x = (unsigned int)floor(zero_x / info.GridSize);
+    ref_y = (unsigned int)floor(zero_y / info.GridSize);
 }
 
 /*
@@ -202,14 +202,14 @@ void grid_ref(Real x, Real y, int &ref_x, int &ref_y)
 string interpolate(Real x, Real y)
 {
 
-    int cellx, celly;
+    unsigned int cellx, celly;
     grid_ref(x, y, cellx, celly);
 
     Real os_x = ((x - info.MillMinX) - ((Real) cellx * info.GridSize)) / info.GridSize;
     Real os_y = ((y - info.MillMinY) - ((Real) celly * info.GridSize)) / info.GridSize;
 
-    int px_cell = cellx + (os_x > 0.5 ? 1 : -1);
-    int py_cell = celly + (os_y > 0.5 ? 1 : -1);
+    unsigned int px_cell = cellx + (os_x > 0.5 ? 1 : -1);
+    unsigned int py_cell = celly + (os_y > 0.5 ? 1 : -1);
 
     if (px_cell < 0 || px_cell > info.GridMaxX) {
         px_cell = cellx;
@@ -355,7 +355,7 @@ void GenerateGCodeWithProbing(const char *outfile_path)
              * we should do it in a fairly optimal way
              */
 
-            int gx, gy, rgx;
+            unsigned int gx, gy, rgx;
 
             for (gy = 0; gy <= info.GridMaxY; gy++) {
                 for (rgx = 0; rgx <= info.GridMaxX; rgx++) {
