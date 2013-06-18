@@ -31,6 +31,9 @@ struct PCBProbeInfo
     Real MillMinY;
     Real MillMaxX;
     Real MillMaxY;
+
+    //Route Depth
+    Real MillRouteDepth;
     
     //Number of cells in Grid
     unsigned int GridMaxX;

@@ -85,10 +85,10 @@ void LoadAndSplitSegments(const char *infile_path)
     bool definedMillMaxX = false;
     bool definedMillMinY = false;
     bool definedMillMaxY = false;
+    bool definedMillRouteDepth = false;
 
     info.ResetPos();
-    info.GridSize = 5;
-    info.SplitOver = 5;
+    info.SplitOver = info.GridSize;
 
     while (in.good()) {
 
@@ -114,6 +114,9 @@ void LoadAndSplitSegments(const char *infile_path)
             moveTo(cmd);
 
             if (info.Pos.z < 0) {
+                if (!definedMillRouteDepth || (info.Pos.z < info.MillRouteDepth))
+                    info.MillRouteDepth = info.Pos.z;
+
                 if (!definedMillMinX || (info.Pos.x < info.MillMinX)) {
                     definedMillMinX = true;
                     info.MillMinX = info.Pos.x;
@@ -297,23 +300,27 @@ void GenerateGCodeWithProbing(const char *outfile_path)
          */
         if (cmd.name == "G21" || cmd.name == "G20") {
             Real clear_height;
-            Real traverse_height;
-            Real route_depth;
-            Real probe_depth;
-            Real initial_probe;
+            Real traverse_height; //Traverse height
+            Real probe_depth;     //Probe max depth, stop at this position if not triggered
+            Real initial_probe;   // Initial probe Z position to find worksurface
+            Real traverse_speed; // Traver Speed
+            Real probe_speed; //Probe Speed
                 
             if (info.UnitType == UNIT_INCHES) {
                 clear_height = 0.47244;
                 traverse_height = 0.01969;
-                route_depth = -0.001969;
                 probe_depth = -0.03937;
                 initial_probe = -0.1969;
+                traverse_speed = 400 / 25.4;
+                probe_speed = 60/25.4;
             } else {
                 clear_height = 12.0;
                 traverse_height = 0.5;
-                route_depth = -0.05;
                 probe_depth = -1;
                 initial_probe = -5;
+                traverse_speed = 400;
+                probe_speed = 60;
+
             }
             
             out << cmd.ToString() << endl;
@@ -323,14 +330,14 @@ void GenerateGCodeWithProbing(const char *outfile_path)
                     "\n"
                     "#1=" << clear_height << "			(clearance height)\n"
                     "#2=" << traverse_height << "       	(traverse height)\n"
-                    "#3=" << route_depth << "   		(route depth)\n"
+                    "#3=" << info.MillRouteDepth << "   		(route depth)\n"
                     "#4=" << probe_depth << "			(probe depth)\n"
-                    "#5=400			(traverse speed)\n"
-                    "#6=60			(probe speed)\n"
+                    "#5=" << traverse_speed << "			(traverse speed)\n"
+                    "#6=" << probe_speed << "			(probe speed)\n"
                     "\n"
                     "\n"
                     "M05			(stop motor)\n"
-                    "(MSG,PROBE: Position to within 5mm (~0.2 inches) of surface & resume)\n"
+                    "(MSG,PROBE: Position to within 5mm [~0.2 inches] of surface & resume)\n"
                     "M60			(pause, wait for resume)\n"
                     "G49			(clear any tool offsets)\n"
                     "G92.1			(zero co-ordinate offsets)\n"
