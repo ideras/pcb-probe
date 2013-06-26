@@ -10,7 +10,7 @@ using namespace std;
 
 PCBProbeInfo info;
 list<GCodeCommand> cmdList;
-map<string, int> cellVariables; //GCode variables associated with every cell in the Grid
+map<string, int> cellVariables; //GCode parameters associated with every cell in the Grid
 int nextVariableNumber = 2000;
 int currentLine = 0;
 
@@ -58,7 +58,7 @@ static void split_if_needed(GCodeCommand &command)
     }
 }
 
-void moveTo(GCodeCommand &command)
+static inline void moveTo(GCodeCommand &command)
 {
     if (command.hasXCoord())
         info.Pos.x = command.getXCoord();
@@ -86,9 +86,11 @@ void LoadAndSplitSegments(const char *infile_path)
     bool definedMillMinY = false;
     bool definedMillMaxY = false;
     bool definedMillRouteDepth = false;
+	bool definedDrillSpotDepth = false;
 
     info.ResetPos();
     info.SplitOver = info.GridSize;
+	info.HasDrillSpots = false;
 
     while (in.good()) {
 
@@ -135,14 +137,29 @@ void LoadAndSplitSegments(const char *infile_path)
                 }
             }
 
-        } else if (!cmd.name.empty()) {
+		} else if (cmd.name == "G82") {
+			moveTo(cmd);
+
+			info.HasDrillSpots = true;
+			if (!definedDrillSpotDepth && cmd.hasZCoord())
+				info.DrillSpotDepth = cmd.getZCoord();
+
+			cmdList.push_back(cmd);
+
+		} else if (!cmd.name.empty()) {
             cmdList.push_back(cmd);
         }
     }
     in.close();
 
-    info.GridMaxX = (unsigned int)floor((info.MillMaxX - info.MillMinX) / info.GridSize);
-    info.GridMaxY = (unsigned int)floor((info.MillMaxY - info.MillMinY) / info.GridSize);
+	info.GridMaxX = (unsigned int)ceil((info.MillMaxX - info.MillMinX) / info.GridSize);
+    info.GridMaxY = (unsigned int)ceil((info.MillMaxY - info.MillMinY) / info.GridSize);
+
+	info.MillMinX -= info.GridSize / 2.0;
+	info.MillMinY -= info.GridSize / 2.0 ;
+
+	info.Gx = (info.MillMaxX - info.MillMinX)/(info.GridMaxX + 0.5);
+	info.Gy = (info.MillMaxY - info.MillMinY)/(info.GridMaxY + 0.5);
 }
 
 //Second Pass
@@ -194,22 +211,22 @@ void grid_ref(Real x, Real y, unsigned int &ref_x, unsigned int &ref_y)
     Real zero_x = x - info.MillMinX;
     Real zero_y = y - info.MillMinY;
 
-    ref_x = (unsigned int)floor(zero_x / info.GridSize);
-    ref_y = (unsigned int)floor(zero_y / info.GridSize);
+    ref_x = (unsigned int)floor(zero_x / info.Gx);
+    ref_y = (unsigned int)floor(zero_y / info.Gy);
 }
 
 /*
  * Given a co-ordinate we need to interpolate the values from
  * the surrounding cells
  */
-string interpolate(Real x, Real y)
+string interpolate(Real x, Real y, bool isLinearMotionCommand)
 {
 
     unsigned int cellx, celly;
     grid_ref(x, y, cellx, celly);
 
-    Real os_x = ((x - info.MillMinX) - ((Real) cellx * info.GridSize)) / info.GridSize;
-    Real os_y = ((y - info.MillMinY) - ((Real) celly * info.GridSize)) / info.GridSize;
+    Real os_x = ((x - info.MillMinX) - ((Real) cellx * info.Gx)) / info.Gx;
+    Real os_y = ((y - info.MillMinY) - ((Real) celly * info.Gy)) / info.Gy;
 
     unsigned int px_cell = cellx + (os_x > 0.5 ? 1 : -1);
     unsigned int py_cell = celly + (os_y > 0.5 ? 1 : -1);
@@ -235,14 +252,15 @@ string interpolate(Real x, Real y)
     /*
      * Now we can work out the interpolation...
      */
-    stringstream ss;
+	stringstream ss;
+	string depthParameter = isLinearMotionCommand? "#3" : "#7";
 
     ss.precision(3);
     ss << fixed << (x_pc * y_pc) << "*#" << cell_variable(cellx, celly) << " + " <<
             ((1 - x_pc) * y_pc) << "*#" << cell_variable(px_cell, celly) << " + " <<
             (x_pc * (1 - y_pc)) << "*#" << cell_variable(cellx, py_cell) << " + " <<
             ((1 - x_pc) * (1 - y_pc)) << "*#" << cell_variable(px_cell, py_cell) << " + " <<
-            "#3";
+            depthParameter;
 
     return ss.str();
 }
@@ -270,11 +288,16 @@ void DoInterpolation()
                  * First thing we do is allocate a variable number to the grid
                  * square (if it hasn't already got one)
                  */
-                string zformula = interpolate(info.Pos.x, info.Pos.y);
+                string zformula = interpolate(info.Pos.x, info.Pos.y, true);
                 it->setZFormula(zformula);
             }
 
-        }
+		} else if (cmd.name == "G82") {
+			moveTo(cmd);
+
+			string zformula = interpolate(info.Pos.x, info.Pos.y, false);
+			it->setZFormula(zformula);
+		}
 
         it++;
     }
@@ -325,18 +348,21 @@ void GenerateGCodeWithProbing(const char *outfile_path)
             
             out << cmd.ToString() << endl;
             out << "\n"
-                    "(Processed with pcb-probe by Lee Essen, 2011, Ivan de Jesus Deras 2013)"
+                    "(Processed with pcb-probe by Ivan de Jesus Deras 2013 [Lee Essen, 2011] )"
                     "\n"
                     "\n"
                     "#1=" << clear_height << "			(clearance height)\n"
-                    "#2=" << traverse_height << "       	(traverse height)\n"
-                    "#3=" << info.MillRouteDepth << "   		(route depth)\n"
+                    "#2=" << traverse_height << "			(traverse height)\n"
+                    "#3=" << info.MillRouteDepth << "		(route depth)\n"
                     "#4=" << probe_depth << "			(probe depth)\n"
                     "#5=" << traverse_speed << "			(traverse speed)\n"
-                    "#6=" << probe_speed << "			(probe speed)\n"
-                    "\n"
-                    "\n"
-                    "M05			(stop motor)\n"
+                    "#6=" << probe_speed << "			(probe speed)\n";
+			
+	    if (info.HasDrillSpots)
+		out << "#7=" << info.DrillSpotDepth << "		(drill spot depth)\n";
+
+	    out << endl << endl;
+            out <<  "M05			(stop motor)\n"
                     "(MSG,PROBE: Position to within 5mm [~0.2 inches] of surface & resume)\n"
                     "M60			(pause, wait for resume)\n"
                     "G49			(clear any tool offsets)\n"
@@ -373,8 +399,8 @@ void GenerateGCodeWithProbing(const char *outfile_path)
                     }
 
                     // Find the point in the centre of the grid square...
-                    Real px = info.MillMinX + ((Real) gx * info.GridSize) + (info.GridSize / 2);
-                    Real py = info.MillMinY + ((Real) gy * info.GridSize) + (info.GridSize / 2);
+                    Real px = info.MillMinX + ((Real) gx * info.Gx) + (info.Gx / 2);
+                    Real py = info.MillMinY + ((Real) gy * info.Gy) + (info.Gy / 2);
 
                     if (!cellHasVariable(gx, gy))
                         continue;
